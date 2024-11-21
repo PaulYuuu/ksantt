@@ -1,0 +1,42 @@
+---
+- name: Create multiple pods with PVCs
+  hosts: localhost
+  tasks:
+    - name: Create PVCs
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: PersistentVolumeClaim
+          metadata:
+            name: pod-pvc-{{ item }}
+            namespace: default
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+            storageClassName: kube-san
+      with_sequence: start=1 end=5 format=pod-pvc-%d
+    - name: Create pods with attached PVCs
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: Pod
+          metadata:
+            name: nginx-pod-{{ item }}
+            namespace: default
+          spec:
+            containers:
+              - name: kubesan-container
+                image: nginx
+                volumeMounts:
+                  - mountPath: /usr/share/nginx/html
+                    name: kubesan-volume
+            volumes:
+              - name: kubesan-volume
+                persistentVolumeClaim:
+                  claimName: pod-pvc-{{ item }}
+      with_sequence: start=1 end=5
+      loop_control:
+        label: nginx-pod-{{ item }}

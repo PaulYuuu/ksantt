@@ -1,0 +1,6 @@
+summary: KubeSAN PersistentVolumeClaim test plan
+discover+:
+  how: fmf
+  test: pvc
+execute:
+  how: tmt

@@ -1,0 +1,27 @@
+---
+- name: Create 100 OpenShift PVCs
+  hosts: localhost
+  tasks:
+    - name: Create Persistent Volume Claims
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: PersistentVolumeClaim
+          metadata:
+            name: "{{ item }}"
+            namespace: default
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+      with_sequence: start=1 end=100 format=kubesan-pvc-%03d
+      register: pvc_creation_results
+      environment:
+        KUBECONFIG: /path/to/your/kubeconfig # Set the path to your kubeconfig file
+    - name: Show PVC creation results
+      ansible.builtin.debug:
+        msg: "Created PVC: {{ item.item }} in namespace default"
+      loop: "{{ pvc_creation_results.results }}"
+      when: item is defined and item is not failed

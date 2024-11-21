@@ -1,0 +1,54 @@
+---
+- block:
+    - include_tasks: operations/create.yml
+    - name: Clone PVC
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          kind: PersistentVolumeClaim
+          metadata:
+            name: "{{ pvc_clone_name }}"
+            namespace: "{{ ocp.namespace }}"
+          spec:
+            storageClassName: "{{ ocp_sc_name }}"
+            volumeMode: "{{ pvc_volume_mode }}"
+            resources:
+              requests:
+                storage: "{{ pvc_size }}"
+            accessModes:
+              - "{{ pvc_access_modes }}"
+            dataSource:
+              name: "{{ pvc.name }}"
+              kind: PersistentVolumeClaim
+              apiGroup: ""
+      register: pvc_clone_creation
+    - name: Wait for PVC Clone to be bound
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: PersistentVolumeClaim
+        namespace: "{{ ocp.namespace }}"
+        name: "{{ pvc_clone_name }}"
+      register: pvc_clone_status
+      until: pvc_clone_status.resources[0].status.phase == 'Bound'
+      retries: 30
+      delay: 10
+      timeout: 300
+    - name: Check if PVC Clone is bound
+      debug:
+        msg: PVC Clone '{{ pvc_clone_name }}' is bound
+      when: pvc_clone_status.resources[0].status.phase == 'Bound'
+  always:
+    - name: Delete PVC and PVC Clone
+      kubernetes.core.k8s:
+        kind: PersistentVolumeClaim
+        state: absent
+        name: "{{ pvc.name }}"
+        namespace: "{{ ocp.namespace }}"
+      ignore_errors: true
+    - name: Delete PVC Clone
+      kubernetes.core.k8s:
+        kind: PersistentVolumeClaim
+        state: absent
+        name: "{{ pvc_clone_name }}"
+        namespace: "{{ ocp.namespace }}"
+      ignore_errors: true

@@ -1,0 +1,16 @@
+---
+ocp:
+  namespace: default
+sc:
+  name: kube-san
+  mode: Thin
+  volumeGroup: kubesan-vg
+  reclaimPolicy: Retain
+pvc:
+  name: test-pvc
+  volumeMode: Block
+  size: 1G
+  accessModes: ReadWriteOnce
+  deleteAll: false
+test:
+  type: pvc

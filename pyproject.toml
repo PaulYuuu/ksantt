@@ -1,0 +1,69 @@
+[project]
+name = "ksantt"
+version = "0.2.0"
+description = "KubeSAN Testing Tool"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "allure-behave",
+    "behave",
+    "behave-reportportal",
+    "kubernetes",
+    "openshift-python-utilities",
+    "openshift-python-wrapper",
+]
+[project.optional-dependencies]
+dev = [
+    "pre-commit"
+]
+
+[tool.ruff]
+exclude = [
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+]
+
+line-length = 120
+indent-width = 4
+output-format = "grouped"
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    "W",
+    # Pyflakes
+    "F",
+    # isort
+    "I",
+    # flake8-logging-format
+    "G",
+    # pylint Error
+    "PLC",
+    "PLE",
+]
+ignore = ["G004"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+[tool.mypy]
+# Enforce type hints on function arguments (but not return types)
+no_implicit_optional = true
+show_error_codes = true
+warn_unused_ignores = true

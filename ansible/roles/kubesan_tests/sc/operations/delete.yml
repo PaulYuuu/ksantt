@@ -1,0 +1,8 @@
+---
+- name: Delete KubeSAN based Storage Class
+  kubernetes.core.k8s:
+    wait: true
+    state: absent
+    kind: StorageClass
+    name: "{{ sc.name }}"
+    namespace: "{{ ocp.namespace }}"
