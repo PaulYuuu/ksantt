@@ -1,0 +1,15 @@
+---
+- name: Create KubeSAN based Storage Class
+  kubernetes.core.k8s:
+    wait: true
+    state: present
+    definition:
+      kind: StorageClass
+      metadata:
+        name: "{{ sc.name }}"
+        namespace: "{{ ocp.namespace }}"
+      provisioner: kubesan.gitlab.io
+      reclaimPolicy: Retain
+      parameters:
+        lvmVolumeGroup: "{{ sc.volumeGroup }}"
+        mode: "{{ sc.mode }}"

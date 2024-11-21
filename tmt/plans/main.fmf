@@ -1,0 +1,23 @@
+summary: KubeSAN test plan
+discover:
+  how: fmf
+execute:
+  how: tmt
+provision:
+  how: connect
+  guest: $TEST_DOMAIN
+  user: $DOMAIN_USER
+  password: $DOMAIN_PASSWORD
+
+prepare:
+  - name: Install dependencies
+    how: install
+    package:
+      - nodejs
+      - cargo
+    missing: fail
+  - name: Install required packages
+    how: shell
+    script:
+      - node install -g allure
+      - cargo install --git https://github.com/astral-sh/uv uv

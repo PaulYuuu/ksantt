@@ -1,0 +1,24 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: v1
+    kind: Pod
+    name: filesystem-pod
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: new-filesystem-pod
+spec:
+  containers:
+    - name: filesystem-container
+      image: quay.io/centos/centos:stream9-minimal
+      command: ["sleep", "infinity"]
+      volumeMounts:
+        - mountPath: /mnt/filesystem-rwo
+          name: rwo-file-pvc
+  volumes:
+    - name: rwo-file-pvc
+      persistentVolumeClaim:
+        claimName: pvc-filesystem-rwo

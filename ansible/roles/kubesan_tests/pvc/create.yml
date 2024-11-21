@@ -1,0 +1,27 @@
+---
+- block:
+    - ansible.builtin.include_tasks: pvc/operations/create.yml
+  rescue:
+    - name: Retrieve PVC events
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Event
+        namespace: "{{ ocp.namespace }}"
+        field_selectors:
+          - involvedObject.name={{ pvc.name }}
+      register: pvc_events
+    - name: Display PVC events
+      ansible.builtin.fail:
+        msg: |
+          PVC '{{ pvc.name }}' is not bound. Current status: {{ pvc_status.resources[0].status.phase }}.
+          {% for event in pvc_events.resources %}
+            - Reason: {{ event.reason }}
+              Message: {{ event.message }}
+              Last Seen: {{ event.lastTimestamp }}
+              Type: {{ event.type }}
+              Source: {{ event.source.component }}
+              Involved Object: {{ event.involvedObject.name }}
+          {% endfor %}
+      ignore_errors: true
+  always:
+    - ansible.builtin.include_tasks: pvc/operations/delete.yml

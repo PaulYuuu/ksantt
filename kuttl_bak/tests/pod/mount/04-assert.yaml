@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: new-filesystem-pod
+# Sip checking mount point causes kuttl will add an secret mount
+#spec:
+#  containers:
+#    - name: filesystem-container
+#      volumeMounts:
+#        - mountPath: /mnt/filesystem-rwo
+#          name: rwo-file-pvc
+status:
+  phase: Running

@@ -1,0 +1,22 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    name: kube-san
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: pvc-block-rwo
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: pvc-block-rwx
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: pvc-block-rox
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: pvc-filesystem-rox
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: pvc-filesystem-rwo

@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: block-pod
+spec:
+  containers:
+    - name: block-container
+      image: quay.io/centos/centos:stream9-minimal
+      command: ["sleep", "infinity"]
+      volumeDevices:
+        - devicePath: "/dev/rwo-block"
+          name: rwo-block-pvc
+        - devicePath: "/dev/rwx-block"
+          name: rwx-block-pvc
+        - devicePath: "/dev/rox-block"
+          name: rox-block-pvc
+  volumes:
+    - name: rwo-block-pvc
+      persistentVolumeClaim:
+        claimName: pvc-block-rwo
+    - name: rwx-block-pvc
+      persistentVolumeClaim:
+        claimName: pvc-block-rwx
+    - name: rox-block-pvc
+      persistentVolumeClaim:
+        claimName: pvc-block-rox
