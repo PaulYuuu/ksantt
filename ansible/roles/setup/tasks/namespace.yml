@@ -1,0 +1,19 @@
+---
+- name: Check if openshift-storage namespace exists
+  kubernetes.core.k8s_info:
+    kind: Namespace
+    name: openshift-storage
+  register: namespace_status
+- name: Create openshift-storage namespace if not present
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      kind: Namespace
+      name: openshift-storage
+      metadata:
+        labels:
+          openshift.io/cluster-monitoring: "true"
+          pod-security.kubernetes.io/enforce: privileged
+          pod-security.kubernetes.io/audit: privileged
+          pod-security.kubernetes.io/warn: privileged
+    when: namespace_status is not defined or namespace_status.resources | length == 0

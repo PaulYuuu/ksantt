@@ -1,0 +1,9 @@
+---
+- name: Delete pod(s)
+  kubernetes.core.k8s:
+    wait: true
+    state: absent
+    name: "{{ pod.name }}"
+    kind: Pod
+    delete_all: "{{ pod.delete_all }}"
+    namespace: "{{ ocp.namespace }}"

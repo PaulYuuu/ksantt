@@ -1,0 +1,7 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+apply:
+  - ../resources/filesystem-pvc.yaml
+assert:
+  - ../resources/filesystem-assert.yaml
