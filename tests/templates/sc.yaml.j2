@@ -1,0 +1,9 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ sc_name }}
+provisioner: kubesan.gitlab.io
+parameters:
+  lvmVolumeGroup: {{ vg_name }}
+  mode: {{ sc_mode }}
+  csi.storage.k8s.io/fstype: {{ fs_type }}

@@ -1,0 +1,4 @@
+---
+warn_list:
+  - experimental # all rules tagged as experimental
+  - latest[git] # Git checkouts must contain explicit version

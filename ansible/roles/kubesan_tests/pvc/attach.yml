@@ -1,0 +1,101 @@
+---
+- name: Test PVC with Block mode and attach to pod
+  block:
+    - include_tasks: operations/create.yml
+      register: pvc_creation
+    - name: Create pod that attaches the PVC in the first worker node
+      kubernetes.core.k8s:
+        wait: true
+        state: present
+        definition:
+          kind: Pod
+          metadata:
+            name: c9s-pod-1
+            namespace: "{{ ocp.namespace }}"
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: "{{ groups['worker'][0] }}"
+            containers:
+              - name: kubesan-container
+                image: quay.io/centos/centos:stream9-minimal
+                command: [sleep, infinity]
+                volumeDevices:
+                  - devicePath: /dev/kubesan-pvc
+                    name: kubesan-volume
+            volumes:
+              - name: kubesan-volume
+                persistentVolumeClaim:
+                  claimName: "{{ pvc.name }}"
+    - name: Create test file in pod and save sha256 hash
+      kubernetes.core.k8s_exec:
+        namespace: "{{ ocp.namespace }}"
+        pod: c9s-pod-1
+        command: dd if=/dev/urandom of=/dev/kubesan-pvc bs=1M count=64
+    - name: Collect sha256 hash from pod1
+      kubernetes.core.k8s_exec:
+        namespace: "{{ ocp.namespace }}"
+        pod: c9s-pod-1
+        command: sha256sum /dev/kubesan-pvc
+      register: pod1_sha256
+    - name: Delete the first pod
+      kubernetes.core.k8s:
+        wait: true
+        state: absent
+        kind: Pod
+        name: c9s-pod-1
+        namespace: "{{ ocp.namespace }}"
+    - name: Create another pod using the same PVC in the last worker node
+      kubernetes.core.k8s:
+        wait: true
+        state: present
+        definition:
+          kind: Pod
+          metadata:
+            name: c9s-pod-2
+            namespace: "{{ ocp.namespace }}"
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: "{{ groups['worker'][-1] }}"
+            containers:
+              - name: kubesan-container
+                image: quay.io/centos/centos:stream9-minimal
+                command: [sleep, infinity]
+                volumeDevices:
+                  - devicePath: /dev/kubesan-pvc
+                    name: kubesan-volume
+            volumes:
+              - name: kubesan-volume
+                persistentVolumeClaim:
+                  claimName: "{{ pvc.name }}"
+    - name: Collect sha256 hash from pod2
+      kubernetes.core.k8s_exec:
+        namespace: "{{ ocp.namespace }}"
+        pod: c9s-pod-2
+        command: sha256sum /dev/kubesan-pvc
+      register: pod2_sha256
+    - name: Verify sha256 hash are the same
+      debug:
+        msg: The sha256 values are the same
+      failed_when: pod1_sha256.stdout != pod2_sha256.stdout
+      ignore_errors: true
+    - name: Delete the second pod
+      kubernetes.core.k8s:
+        wait: true
+        state: absent
+        kind: Pod
+        name: c9s-pod-2
+        namespace: "{{ ocp.namespace }}"
+  always:
+    - name: delete pods
+      kubernetes.core.k8s:
+        wait: true
+        state: absent
+        delete_all: true
+        kind: Pod
+        namespace: "{{ ocp.namespace }}"
+    - name: Delete PVC
+      kubernetes.core.k8s:
+        state: absent
+        kind: PersistentVolumeClaim
+        delete_all: true
+        namespace: "{{ ocp.namespace }}"

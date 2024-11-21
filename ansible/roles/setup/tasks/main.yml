@@ -1,0 +1,5 @@
+---
+- include_tasks: namespace.yml
+- include_tasks: operatorgroup.yml
+- include_tasks: lvmo.yml
+- include_tasks: lvmc.yml

@@ -1,0 +1,5 @@
+---
+- ansible.builtin.include_tasks: ../sc/operations/create.yml
+- name: Run {{ test.type }} test suite
+  ansible.builtin.include_tasks: "{{ test.type }}.yml"
+- ansible.builtin.include_tasks: ../sc/operations/delete.yml

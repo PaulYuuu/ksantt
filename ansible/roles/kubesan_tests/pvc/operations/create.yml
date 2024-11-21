@@ -1,0 +1,27 @@
+---
+- name: Create PVC
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "{{ pvc.name }}"
+        namespace: "{{ ocp.namespace }}"
+      spec:
+        storageClassName: "{{ sc.name }}"
+        volumeMode: "{{ pvc.volumeMode }}"
+        resources:
+          requests:
+            storage: "{{ pvc.size }}"
+        accessModes:
+          - "{{ pvc.accessModes }}"
+- name: Wait for PVC to be Bound status
+  kubernetes.core.k8s_info:
+    kind: PersistentVolumeClaim
+    namespace: "{{ ocp.namespace }}"
+    name: "{{ pvc.name }}"
+  register: pvc_status
+  until: pvc_status.resources[0].status.phase == 'Bound'
+  retries: 10
+  delay: 5
+  timeout: 50
