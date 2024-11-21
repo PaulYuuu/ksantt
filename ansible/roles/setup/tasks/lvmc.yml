@@ -1,0 +1,23 @@
+---
+- name: Create KubeSAN LVMCluster
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: lvm.topolvm.io/v1alpha1
+      kind: LVMCluster
+      metadata:
+        name: kubesan-lvmcluster
+        namespace: openshift-storage
+      spec:
+        storage:
+          deviceClasses:
+            - name: kubesan-vg
+              default: true
+              nodeSelectorTerms:
+                - matchExpressions:
+                    - key: node.kubernetes.io/worker
+                      operator: Exists
+              deviceSelector:
+                paths:
+                  - /dev/sdc
+              deviceAccessPolicy: shared

@@ -1,0 +1,13 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: oc exec block-pod -- mkfs.xfs /dev/rwo-block
+  - command: oc exec block-pod -- mkfs.xfs /dev/rwx-block
+  - command: oc exec block-pod -- mkfs.xfs /dev/rox-block
+  - command: oc exec block-pod -- mkdir /mnt/rwo
+  - command: oc exec block-pod -- mkdir /mnt/rwx
+  - command: oc exec block-pod -- mkdir /mnt/rox
+  - command: oc exec block-pod -- mount /dev/rwo-block /mnt/rwo
+  - command: oc exec block-pod -- mount /dev/rwx-block /mnt/rwx
+  - command: oc exec block-pod -- mount /dev/rox-block /mnt/rox

@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: block-pod
+status:
+  phase: Running
+spec:
+  containers:
+    - name: block-container
+      volumeDevices:
+        - devicePath: "/dev/rwo-block"
+          name: rwo-block-pvc
+        - devicePath: "/dev/rwx-block"
+          name: rwx-block-pvc
+        - devicePath: "/dev/rox-block"
+          name: rox-block-pvc

@@ -1,0 +1,32 @@
+---
+- name: Clone PVC
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      kind: PersistentVolumeClaim
+      metadata:
+        name: cloned-pvc
+        namespace: "{{ ocp.namespace }}"
+      spec:
+        storageClassName: "{{ sc.name }}"
+        volumeMode: "{{ pvc.volumeMode }}"
+        resources:
+          requests:
+            storage: "{{ pvc.size }}"
+        accessModes:
+          - "{{ pvc.accessModes }}"
+        dataSource:
+          name: "{{ pvc.name }}"
+          kind: PersistentVolumeClaim
+  register: pvc_clone_creation
+- name: Wait for PVC Clone to be bound
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: PersistentVolumeClaim
+    namespace: "{{ ocp.namespace }}"
+    name: cloned-pvc
+  register: pvc_clone_status
+  until: pvc_clone_status.resources[0].status.phase == 'Bound'
+  retries: 30
+  delay: 10
+  timeout: 300

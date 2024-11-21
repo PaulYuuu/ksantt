@@ -1,0 +1,2 @@
+cd ../..
+behave --tags $TAG

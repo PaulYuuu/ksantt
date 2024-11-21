@@ -1,0 +1,9 @@
+---
+- name: Delete PVC
+  kubernetes.core.k8s:
+    wait: true
+    state: absent
+    namespace: "{{ ocp.namespace }}"
+    kind: PersistentVolumeClaim
+    name: "{{ pvc.name }}"
+    delete_all: "{{ pvc.deleteAll }}"
