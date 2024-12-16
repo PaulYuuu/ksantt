@@ -5,6 +5,7 @@ from ocp_resources.pod import Pod
 from timeout_sampler import TimeoutExpiredError
 
 import utils
+from utils.exceptions import BehaveStepError
 
 
 @given("a DataVolume with accessMode {access_modes} and volumeMode {volume_mode}")
@@ -43,8 +44,9 @@ def create_dv(context: Context):
 @then("the DataVolume should be in Succeeded phase")
 def dv_should_be_succeeded(context: Context):
     """Verify that the DV transitions to the 'Succeeded' status."""
+    timeout = 360
     try:
-        context.dv.wait_for_dv_success(timeout=360)
+        context.dv.wait_for_dv_success(timeout=timeout)
         context.log.info(f"DataVolume {context.dv.name} is ready")
     except TimeoutExpiredError:
         expected_skipped = False
@@ -61,18 +63,13 @@ def dv_should_be_succeeded(context: Context):
                 expected_skipped = True
             event_messages.append(message)
 
-        context.log.debug(f"DataVolume is in {context.dv.status} status")
+        context.log.error(f"DataVolume is in {context.dv.status} pahse")
         utils.rp_attach_plain(
             context.log.debug, "DataVolume importer events", "dv_events.txt", "\n".join(event_messages)
         )
-        if expected_skipped:
-            context.scenario.skip(f'DataVolume using not supported accessModes "{context.dv.access_modes}"')
-        else:
-            raise
-    finally:
-        utils.rp_attach_json(
-            context.log.debug, "DataVolume instance details", "dv_instance.json", context.dv.instance.to_dict()
-        )
+        if not expected_skipped:
+            raise BehaveStepError(context.step.name, f"Wait until DataVolume succeeded timeout after {timeout}s")
+        context.scenario.skip(f'DataVolume using not supported accessModes "{context.dv.access_modes}"')
 
 
 @when("I delete the DataVolume")
