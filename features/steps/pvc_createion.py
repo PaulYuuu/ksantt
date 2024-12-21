@@ -60,11 +60,8 @@ def pvc_should_be_bound(context: Context):
 @when("I delete the PVC")
 def delete_pvc(context: Context):
     """Delete the PersistentVolumeClaim (PVC) if it exists."""
-    if context.pvc.exists:
-        context.pvc.delete(wait=True)
-        context.log.info(f"PersistentVolumeClaim {context.pvc.name} is deleted")
-    else:
-        context.pvc.logger.warning(f"PersistentVolumeClaim '{context.pvc.name}' does not exist")
+    context.pvc.delete(wait=True)
+    context.log.info(f"PersistentVolumeClaim {context.pvc.name} is deleted")
 
 
 @then("the PVC should not exist")

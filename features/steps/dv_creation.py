@@ -10,21 +10,23 @@ from utils.exceptions import BehaveStepError
 
 @given("a DataVolume with accessMode {access_modes} and volumeMode {volume_mode}")
 def define_dv(context: Context, access_modes: str, volume_mode: str):
-    """Fixture to init DV and return it."""
+    """Fixture to init DataVolume and return it."""
     sc_mode = context.sc.instance.parameters.mode
     dv_name = f"dv-{sc_mode.lower()}-{volume_mode.lower()}-{access_modes.lower()}"
     url = context.config.userdata["image_url"]
+    size = context.config.userdata["image_size"]
+    source = context.config.userdata["image_source"]
 
     dv = DataVolume(
         name=dv_name,
         namespace=context.ns.name,
         client=context.client,
-        source="http",
+        source=source,
         url=url,
         storage_class=context.sc.name,
         access_modes=access_modes,
         volume_mode=volume_mode,
-        size="10Gi",
+        size=size,
         preallocation=False,
     )
     if context.rph:
@@ -36,14 +38,14 @@ def define_dv(context: Context, access_modes: str, volume_mode: str):
 
 @when("I create a DataVolume")
 def create_dv(context: Context):
-    """Test creating a DV in the dynamically created test namespace"""
-    # Create the DV in the test namespace
+    """Test creating a DataVolume in the dynamically created test namespace"""
+    # Create the DataVolume in the test namespace
     context.dv.create()
 
 
 @then("the DataVolume should be in Succeeded phase")
 def dv_should_be_succeeded(context: Context):
-    """Verify that the DV transitions to the 'Succeeded' status."""
+    """Verify that the DataVolume transitions to the 'Succeeded' status."""
     timeout = 360
     try:
         context.dv.wait_for_dv_success(timeout=timeout)
@@ -74,16 +76,13 @@ def dv_should_be_succeeded(context: Context):
 
 @when("I delete the DataVolume")
 def delete_dv(context: Context):
-    """Delete the DataVolume if it exists."""
-    if context.dv.exists:
-        context.dv.delete(wait=True)
-        context.log.info(f"DataVolume {context.dv.name} is deleted")
-    else:
-        context.log.warning(f'DataVolume "{context.dv.name}" does not exist.')
+    """Delete the DataVolume."""
+    context.dv.delete(wait=True)
+    context.log.info(f"DataVolume {context.dv.name} is deleted")
 
 
 @then("the DataVolume should not exist")
 def dv_should_not_exist(context: Context):
-    """Verify that the DV no longer exists."""
-    assert not context.dv.exists, f"DV '{context.dv.name}' still exists after deletion."
+    """Verify that the DataVolume no longer exists."""
+    assert not context.dv.exists, f"DataVolume '{context.dv.name}' still exists after deletion."
     context.log.info(f'DataVolume "{context.dv.name}" no longer exists')

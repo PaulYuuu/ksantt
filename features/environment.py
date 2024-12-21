@@ -73,6 +73,7 @@ def before_all(context: Context):
     rp_cfg.endpoint = rp_cfg.endpoint or os.getenv("rp_endpoint")
     rp_cfg.project = rp_cfg.project or os.getenv("rp_project")
     context.rp_client = create_rp_service(rp_cfg)
+    context.rph = None
     logging.setLoggerClass(RPLogger)
     log = logging.getLogger("ksantt")
     log.setLevel("DEBUG")
