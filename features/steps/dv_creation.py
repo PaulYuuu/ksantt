@@ -8,9 +8,16 @@ import utils
 from utils.exceptions import BehaveStepError
 
 
-@given("a DataVolume with accessMode {access_modes} and volumeMode {volume_mode}")
+@given("a DV specification with access mode {access_modes} and storage mode {volume_mode}")
 def define_dv(context: Context, access_modes: str, volume_mode: str):
-    """Fixture to init DataVolume and return it."""
+    """
+    Define a new DataVolume object with the given configuration parameters.
+
+    Args:
+        context: Behave context containing test configuration and resources
+        access_modes: Storage access mode (e.g., ReadWriteOnce, ReadOnlyMany)
+        volume_mode: Volume mode for the storage (e.g., Block, Filesystem)
+    """
     sc_mode = context.sc.instance.parameters.mode
     dv_name = f"dv-{sc_mode.lower()}-{volume_mode.lower()}-{access_modes.lower()}"
     url = context.config.userdata["image_url"]
@@ -36,16 +43,28 @@ def define_dv(context: Context, access_modes: str, volume_mode: str):
     utils.rp_attach_json(context.log.info, "Defined DataVolume with manifest", "dv.json", dv.res)
 
 
-@when("I create a DataVolume")
+@when("I create the DV")
 def create_dv(context: Context):
-    """Test creating a DataVolume in the dynamically created test namespace"""
-    # Create the DataVolume in the test namespace
+    """
+    Create a new DataVolume instance in the cluster using the predefined specification.
+
+    Args:
+        context: Behave context containing the DataVolume object to be created
+    """
     context.dv.create()
 
 
-@then("the DataVolume should be in Succeeded phase")
+@then("the DV status should change to Succeeded")
 def dv_should_be_succeeded(context: Context):
-    """Verify that the DataVolume transitions to the 'Succeeded' status."""
+    """
+    Monitor the DataVolume status and wait for it to reach the Succeeded state.
+
+    Args:
+        context: Behave context containing the DataVolume to verify
+
+    Raises:
+        BehaveStepError: If the DataVolume fails to reach 'Succeeded' status within timeout
+    """
     timeout = 360
     try:
         context.dv.wait_for_dv_success(timeout=timeout)
@@ -65,7 +84,7 @@ def dv_should_be_succeeded(context: Context):
                 expected_skipped = True
             event_messages.append(message)
 
-        context.log.error(f"DataVolume is in {context.dv.status} pahse")
+        context.log.error(f"DataVolume is in {context.dv.status} phase")
         utils.rp_attach_plain(
             context.log.debug, "DataVolume importer events", "dv_events.txt", "\n".join(event_messages)
         )
@@ -74,15 +93,28 @@ def dv_should_be_succeeded(context: Context):
         context.scenario.skip(f'DataVolume using not supported accessModes "{context.dv.access_modes}"')
 
 
-@when("I delete the DataVolume")
+@when("I perform a deletion of the DV")
 def delete_dv(context: Context):
-    """Delete the DataVolume."""
+    """
+    Remove the DataVolume from the cluster and ensure deletion is finished.
+
+    Args:
+        context: Behave context containing the DataVolume to delete
+    """
     context.dv.delete(wait=True)
     context.log.info(f"DataVolume {context.dv.name} is deleted")
 
 
-@then("the DataVolume should not exist")
+@then("the DV should be completely removed")
 def dv_should_not_exist(context: Context):
-    """Verify that the DataVolume no longer exists."""
+    """
+    Verify that the DataVolume has been completely removed from the system.
+
+    Args:
+        context: Behave context containing the DataVolume to verify
+
+    Raises:
+        AssertionError: If the DataVolume still exists after deletion
+    """
     assert not context.dv.exists, f"DataVolume '{context.dv.name}' still exists after deletion."
     context.log.info(f'DataVolume "{context.dv.name}" no longer exists')

@@ -9,18 +9,7 @@ LOGGER = logging.getLogger(__name__)
 class Console(object):
     def __init__(self, vm, username=None, password=None, timeout=30, prompt=None):
         """
-        Connect to VM console
-
-        Args:
-            vm (VirtualMachine): VM resource
-            username (str): VM username
-            password (str): VM password
-
-        Examples:
-            from utilities import console
-            with console.Fedora(vm=vm) as vmc:
-                vmc.sendline('some command)
-                vmc.expect('some output')
+        Initialize a VM console connection.
         """
         self.vm = vm
         self.username = username or self.vm.login_params["username"]
@@ -32,6 +21,9 @@ class Console(object):
         self.cmd = self._generate_cmd()
 
     def connect(self):
+        """
+        Connect to the VM console.
+        """
         LOGGER.info(f"Connect to {self.vm.name} console")
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
 
@@ -40,6 +32,9 @@ class Console(object):
         return self.child
 
     def _connect(self):
+        """
+        Handle login sequence for VM console connection.
+        """
         self.child.send("\n\n")
         if self.username:
             self.child.expect(self.login_prompt, timeout=360)
@@ -54,6 +49,9 @@ class Console(object):
         LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
     def disconnect(self):
+        """
+        Disconnect from the VM console.
+        """
         if self.child.terminated:
             self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
 
@@ -67,13 +65,15 @@ class Console(object):
 
     def force_disconnect(self):
         """
-        Method is a workaround for RHEL 7.7.
-        For some reason, console may not be logged out successfully in __exit__()
+        Force disconnect from VM console. Workaround for RHEL 7.7.
         """
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
         self.disconnect()
 
     def console_eof_sampler(self, func, command, timeout):
+        """
+        Sample console EOF with timeout handling.
+        """
         sampler = TimeoutSampler(
             wait_timeout=360,
             sleep=5,
@@ -90,6 +90,9 @@ class Console(object):
                 break
 
     def _generate_cmd(self):
+        """
+        Generate virtctl console command.
+        """
         cmd = f"virtctl console {self.vm.name}"
         if self.vm.namespace:
             cmd += f" -n {self.vm.namespace}"
@@ -97,12 +100,12 @@ class Console(object):
 
     def __enter__(self):
         """
-        Connect to console
+        Connect to console on context enter.
         """
         return self.connect()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Logout from shell
+        Disconnect from console on context exit.
         """
         self.disconnect()

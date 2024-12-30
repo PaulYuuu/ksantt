@@ -7,16 +7,15 @@ from utils import rp_attach_json
 from utils.vm import VM
 
 
-@given("a VM with {cpu:d} vCPUs and {memory} memory")
+@given("a VM specification with {cpu:d} vCPUs and {memory} memory")
 def step_define_vm(context: Context, cpu: int, memory: str):
     """
-    Define a VirtualMachine with specified CPU and memory resources.
+    Define a new VirtualMachine object with the given configuration parameters.
 
     Args:
-        context (Context): The Behave context object containing test configuration and state
-        cpu (int): Number of virtual CPUs to allocate to the VM
-        memory (str): Amount of memory to allocate to the VM (e.g., '2Gi', '512Mi')
-
+        context: Behave context containing test configuration and resources
+        cpu: Number of virtual CPUs to allocate to the VirtualMachine
+        memory: Amount of memory to allocate to the VirtualMachine (e.g., '2Gi', '512Mi')
     """
     vm_name = f"vm-{cpu}-{memory.lower()}"
     url = context.config.userdata["image_url"]
@@ -39,7 +38,6 @@ def step_define_vm(context: Context, cpu: int, memory: str):
         username=vm_username,
         password=vm_password,
     )
-    context.vm = vm
     if context.rph:
         vm.logger.addHandler(context.rph)
     vm.to_dict()
@@ -47,15 +45,28 @@ def step_define_vm(context: Context, cpu: int, memory: str):
     utils.rp_attach_json(context.log.info, "Defined VirtualMachine with manifest", "vm.json", vm.res)
 
 
-@when("I create a VM")
+@when("I create the VM")
 def create_vm(context: Context):
-    """Test creating a VirtualMachine in the dynamically created test namespace"""
-    # Create the VirtualMachine in the test namespace
+    """
+    Create a new VirtualMachine instance in the cluster using the predefined specification.
+
+    Args:
+        context: Behave context containing the VirtualMachine object to be created
+    """
     context.vm.create(wait=True)
 
 
-@then("the VM should be in Running phase")
+@then("the VM status should change to Running")
 def vm_should_be_running(context: Context):
+    """
+    Monitor the VirtualMachine status and wait for it to reach the Running state.
+
+    Args:
+        context: Behave context containing the VirtualMachine to verify
+
+    Raises:
+        TimeoutExpiredError: If the VirtualMachine fails to reach 'Running' status within timeout
+    """
     try:
         context.vm.start(wait=True)
         context.log.info(f"VirtualMachine {context.vm.name} is running")
@@ -69,16 +80,29 @@ def vm_should_be_running(context: Context):
         raise
 
 
-@when("I delete the VM")
+@when("I perform a deletion of the VM")
 def delete_vm(context: Context):
-    """Delete the VirtualMachine."""
+    """
+    Remove the VirtualMachine from the cluster and ensure deletion is finished.
+
+    Args:
+        context: Behave context containing the VirtualMachine to delete
+    """
     context.vm.stop(wait=True)
     context.vm.delete(wait=True)
     context.log.info(f"VirtualMachine {context.vm.name} is deleted")
 
 
-@then("the VM should not exist")
+@then("the VM should be completely removed")
 def vm_should_not_exist(context: Context):
-    """Verify that the VirtualMachine no longer exists."""
+    """
+    Verify that the VirtualMachine has been completely removed from the system.
+
+    Args:
+        context: Behave context containing the VirtualMachine to verify
+
+    Raises:
+        AssertionError: If the VirtualMachine still exists after deletion
+    """
     assert not context.vm.exists, f"VirtualMachine '{context.vm.name}' still exists after deletion."
     context.log.info(f'VirtualMachine "{context.vm.name}" no longer exists')

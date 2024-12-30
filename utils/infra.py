@@ -13,6 +13,9 @@ from ocp_resources.console_cli_download import ConsoleCLIDownload
 
 
 def get_console_spec_links(client: DynamicClient, name: str):
+    """
+    Get console specification links for a given client and name.
+    """
     ccd = ConsoleCLIDownload(client=client, name=name)
     if ccd.exists:
         return ccd.instance.spec.links
@@ -21,7 +24,7 @@ def get_console_spec_links(client: DynamicClient, name: str):
 
 def extract_binary_from_cluster(client, name):
     """
-    Download binary from cluster and extract it to /usr/local/bin/
+    Download binary from cluster and extract it to /usr/local/bin/.
     """
     dst_path = Path("/usr/local/bin")
     binary_map = {
@@ -56,12 +59,21 @@ def extract_binary_from_cluster(client, name):
 
 
 def extract_helm_binary(client):
+    """
+    Extract Helm binary from cluster.
+    """
     return extract_binary_from_cluster(client, "helm")
 
 
 def extract_oc_binary(client):
+    """
+    Extract OpenShift CLI binary from cluster.
+    """
     return extract_binary_from_cluster(client, "oc")
 
 
 def extract_virtctl_binary(client):
+    """
+    Extract virtctl binary from cluster.
+    """
     return extract_binary_from_cluster(client, "virtctl")

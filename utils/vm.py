@@ -12,8 +12,7 @@ from timeout_sampler import TimeoutExpiredError, TimeoutSampler
 
 class VM(VirtualMachine):
     """
-    Class representing a Virtual Machine (VM) with various configurations for storage,
-    CPU, memory, network, and cloud-init data. Inherits from the `VirtualMachine` class.
+    Class representing a Virtual Machine with various configurations.
     """
 
     def __init__(
@@ -53,40 +52,6 @@ class VM(VirtualMachine):
     ):
         """
         Initialize the VM object with various configurations for the virtual machine.
-
-        Args:
-            name (str): The name of the VM.
-            namespace (str): The namespace for the VM.
-            source (str): The source for the data volume.
-            storage_class (str): The storage class for the PVC.
-            url (str): The URL for the storage source.
-            access_modes (str): The access modes for the data volume.
-            disk_type (str): The disk type (e.g., virtio).
-            image_pull_policy (str): The image pull policy.
-            size (str): The size of the data volume.
-            volume_mode (str): The volume mode for the PVC.
-            cpu (int): The number of CPUs to allocate.
-            cpu_sockets (int): The number of CPU sockets.
-            cpu_cores (int): The number of CPU cores.
-            cpu_threads (int): The number of CPU threads.
-            cpu_model (str): The CPU model.
-            cpu_placement (bool): Whether to enable CPU placement.
-            memory (str): The memory size for the VM.
-            memory_guest (str): The guest memory size.
-            network_model (str): The network model (e.g., virtio).
-            eviction_strategy (str): The eviction strategy for the VM.
-            client (object): The Kubernetes client.
-            privileged_client (object): The privileged client.
-            inject_cloud_init (bool): Whether to inject cloud-init data.
-            username (str): The SSH username.
-            password (str): The SSH password.
-            ssh (bool): Whether to enable SSH for the VM.
-            pvc (list): A list of PVCs to attach to the VM.
-            teardown (bool): Whether to tear down the VM when done.
-            run_strategy (str): The run strategy for the VM.
-            dry_run (bool): Whether to perform a dry run.
-            node_selector (dict): The node selector for scheduling.
-            node_selector_labels (dict): The labels for node selection.
         """
         self.name = name
         super().__init__(
@@ -100,6 +65,7 @@ class VM(VirtualMachine):
             node_selector=node_selector,
             node_selector_labels=node_selector_labels,
         )
+
         # Assign additional properties here
         self.source = source
         self.url = url
@@ -108,7 +74,7 @@ class VM(VirtualMachine):
         self.size = size
         self.storage_class = storage_class
         self.image_pull_policy = image_pull_policy
-        self.data_volume = self._data_volume()
+        self.dv = self._data_volume()
         self.disk_type = disk_type
         self.cpu = cpu
         self.cpu_sockets = cpu_sockets
@@ -130,9 +96,6 @@ class VM(VirtualMachine):
     def __cloudinit_data(self):
         """
         Generate the cloud-init configuration for the VM.
-
-        Returns:
-            dict: Cloud-init user data including SSH and user credentials.
         """
         data = {
             "ssh_pwauth": self.ssh,
@@ -145,44 +108,45 @@ class VM(VirtualMachine):
 
     def to_dict(self):
         """
-        Convert the VM object to a dictionary representation for Kubernetes deployment.
-
-        Returns:
-            dict: The Kubernetes deployment definition of the VM.
+        Convert the VM object to a Kubernetes deployment definition.
         """
         super().to_dict()
         self.res["spec"]["runStrategy"] = self.run_strategy
-        self.res["spec"]["dataVolumeTemplates"] = [self.data_volume.res]
+        self.res["spec"]["dataVolumeTemplates"] = [self.dv.res]
 
         template_spec = self.res["spec"].setdefault("template", {}).setdefault("spec", {})
-        resources_spec = template_spec.setdefault("domain", {}).setdefault("resources", {})
-        if self.eviction_strategy:
-            template_spec["evictionStrategy"] = self.eviction_strategy
+        domain_spec = template_spec.setdefault("domain", {})
+        resources_spec = domain_spec.setdefault("resources", {})
 
-        # CPU specifications
-        cpu_spec = template_spec.setdefault("domain", {}).setdefault("cpu", {})
+        # Configure CPU
+        cpu_spec = domain_spec.setdefault("cpu", {})
         if self.cpu:
             resources_spec.setdefault("requests", {})["cpu"] = self.cpu
         else:
-            cpu_spec["sockets"] = self.cpu_sockets
-            cpu_spec["cores"] = self.cpu_cores
-            cpu_spec["threads"] = self.cpu_threads
+            cpu_spec["sockets"] = self.cpu_sockets or 1
+            cpu_spec["cores"] = self.cpu_cores or 1
+            cpu_spec["threads"] = self.cpu_threads or 1
         if self.cpu_model:
             cpu_spec["model"] = self.cpu_model
         if self.cpu_placement:
             cpu_spec["dedicatedCpuPlacement"] = True
 
-        # Memory specifications
-        memory_spec = template_spec.setdefault("domain", {}).setdefault("memory", {})
-        if self.memory:
-            resources_spec.setdefault("requests", {})["memory"] = self.memory
-        else:
-            memory_spec["guest"] = self.memory_guest
+        # Configure memory
+        resources_spec["requests"]["memory"] = self.memory
+        if self.memory_guest:
+            domain_spec["memory"] = {"guest": self.memory_guest}
 
-        # Disk and volume specifications
-        devices_spec = template_spec.setdefault("domain", {}).setdefault("devices", {})
-        volumes_spec = template_spec.setdefault("volumes", [])
+        # Configure eviction strategy
+        if self.eviction_strategy:
+            template_spec["evictionStrategy"] = self.eviction_strategy
+
+        # Configure devices
+        devices_spec = domain_spec.setdefault("devices", {})
+
+        # Configure disks
         disks_spec = devices_spec.setdefault("disks", [])
+        volumes_spec = template_spec.setdefault("volumes", [])
+
         disks_spec.append(
             {
                 "disk": {"bus": self.disk_type},
@@ -191,10 +155,11 @@ class VM(VirtualMachine):
         )
         volumes_spec.append(
             {
+                "dataVolume": {"name": self.dv.name},
                 "name": "rootdisk",
-                "dataVolume": {"name": self.data_volume.name},
             }
         )
+        # Configure cloud-init
         if self.inject_cloud_init:
             disks_spec.append(
                 {
@@ -202,27 +167,24 @@ class VM(VirtualMachine):
                     "name": "cloudinitdisk",
                 }
             )
-            volumes_spec.append(
-                {
-                    "name": "cloudinitdisk",
-                    "cloudInitNoCloud": self.__cloudinit_data(),
-                }
-            )
-        for pvc in self.pvc:
-            disks_spec.append(
-                {
-                    "disk": {"bus": self.disk_type},
-                    "name": pvc.name,
-                }
-            )
-            volumes_spec.append(
-                {
-                    "name": pvc.name,
-                    "persistentVolumeClaim": {"claimName": pvc.name},
-                }
-            )
+            volumes_spec.append({"name": "cloudinitdisk", "cloudInitNoCloud": self.__cloudinit_data()})
 
-        # Network specifications
+        if self.pvc:
+            for pvc in self.pvc:
+                disks_spec.append(
+                    {
+                        "disk": {"bus": self.disk_type},
+                        "name": pvc.name,
+                    }
+                )
+                volumes_spec.append(
+                    {
+                        "persistentVolumeClaim": {"claimName": pvc.name},
+                        "name": pvc.name,
+                    }
+                )
+
+        # Configure network
         interfaces_spec = devices_spec.setdefault("interfaces", [])
         interfaces_spec.append({"model": self.network_model, "name": "default", "masquerade": {}})
         networks_spec = template_spec.setdefault("networks", [])
@@ -231,9 +193,6 @@ class VM(VirtualMachine):
     def _data_volume(self):
         """
         Create a DataVolume object for the VM's disk.
-
-        Returns:
-            DataVolume: The created DataVolume object.
         """
         dv = DataVolume(
             name=self.name,
@@ -242,9 +201,9 @@ class VM(VirtualMachine):
             source=self.source,
             url=self.url,
             storage_class=self.storage_class,
+            size=self.size,
             access_modes=self.access_modes,
             volume_mode=self.volume_mode,
-            size=self.size,
         )
         dv.to_dict()
         dv.res["spec"]["imagePullPolicy"] = self.image_pull_policy
@@ -253,12 +212,6 @@ class VM(VirtualMachine):
     def proxy_command(func: Callable[..., Any]):
         """
         Decorator to add ProxyCommand functionality for SSH connections.
-
-        Args:
-            func: The function to wrap with ProxyCommand.
-
-        Returns:
-            function: The wrapped function with ProxyCommand injected.
         """
 
         @wraps(func)
@@ -273,13 +226,6 @@ class VM(VirtualMachine):
     def cmd(self, command, proxy_command=None):
         """
         Execute a command on the VM using SSH with ProxyCommand.
-
-        Args:
-            command (str): The command to execute on the VM.
-            proxy_command (paramiko.ProxyCommand): The ProxyCommand to use for SSH.
-
-        Returns:
-            tuple: A tuple containing the return code, standard output, and standard error.
         """
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -300,37 +246,18 @@ class VM(VirtualMachine):
     def cmd_status(self, command):
         """
         Execute a command on the VM and return only the return code.
-
-        Args:
-            command (str): The command to execute.
-
-        Returns:
-            int: The return code from the command execution.
         """
         return self.cmd(command)[0]
 
     def cmd_output(self, command):
         """
         Execute a command on the VM and return the standard output.
-
-        Args:
-            command (str): The command to execute.
-
-        Returns:
-            str: The standard output from the command execution.
         """
         return self.cmd(command)[1]
 
     def migrate(self, wait=True, timeout=TIMEOUT_10MINUTES):
         """
         Migrate the VM to another node.
-
-        Args:
-            wait (bool): Whether to wait for the migration to complete.
-            timeout (int): Timeout for the migration process.
-
-        Returns:
-            VirtualMachineInstanceMigration: The migration object if `wait` is False, otherwise None.
         """
         migration_name = f"kubevirt-migrate-{self.name}"
         with VirtualMachineInstanceMigration(

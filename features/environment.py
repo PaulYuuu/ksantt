@@ -16,8 +16,9 @@ import utils
 
 @fixture
 def dynamic_client(context: Context):
-    """Fixture to initialize the Kubernetes DynamicClient."""
-    # Initialize Kubernetes dynamic client
+    """
+    Initialize and configure the Kubernetes dynamic client.
+    """
     dyn_client = DynamicClient(client=config.new_client_from_config())
     context.client = dyn_client
     return dyn_client
@@ -25,12 +26,12 @@ def dynamic_client(context: Context):
 
 @fixture
 def random_namespace(context: Context):
-    """Fixture to create a random test namespace."""
-    # Generate a random name for the namespace (you can add randomness if needed)
+    """
+    Create a random test namespace for isolation.
+    """
     random_suffix = utils.generate_random_string()
     ns_name = f"kubesan-ns-{random_suffix}"
 
-    # Create the test namespace
     ns = Namespace(name=ns_name, client=context.client)
     if context.rph:
         ns.logger.addHandler(context.rph)
@@ -41,7 +42,9 @@ def random_namespace(context: Context):
 
 @fixture
 def storage_class(context: Context):
-    """Fixture to create and return a KubeSAN StorageClass."""
+    """
+    Create a KubeSAN StorageClass with specified parameters.
+    """
     random_suffix = utils.generate_random_string()
     sc_name = f"kubesan-sc-{random_suffix}"
 
@@ -51,7 +54,6 @@ def storage_class(context: Context):
         "csi.storage.k8s.io/fstype": context.config.userdata["sc_fstype"],
     }
 
-    # Create the KubeSAN StorageClass
     sc = StorageClass(
         name=sc_name,
         client=context.client,
@@ -68,6 +70,9 @@ def storage_class(context: Context):
 
 
 def before_all(context: Context):
+    """
+    Initialize global test environment before any tests run.
+    """
     rp_cfg = read_config(context)
     rp_cfg.api_key = rp_cfg.api_key or os.getenv("rp_api_key")
     rp_cfg.endpoint = rp_cfg.endpoint or os.getenv("rp_endpoint")
@@ -90,12 +95,18 @@ def before_all(context: Context):
 
 
 def after_all(context: Context):
+    """
+    Clean up global test environment after all tests complete.
+    """
     if context.rp_client is not None:
         context.rp_agent.finish_launch(context)
         context.rp_client.terminate()
 
 
 def before_feature(context: Context, feature):
+    """
+    Set up environment before each feature starts.
+    """
     if context.rp_client is not None:
         context.rp_agent.start_feature(context, feature)
     use_fixture(dynamic_client, context)
@@ -103,28 +114,43 @@ def before_feature(context: Context, feature):
 
 
 def after_feature(context: Context, feature):
+    """
+    Clean up environment after each feature completes.
+    """
     if context.rp_client is not None:
         context.rp_agent.finish_feature(context, feature)
     context.ns.delete(wait=True)
 
 
 def before_scenario(context: Context, scenario):
+    """
+    Set up environment before each scenario starts.
+    """
     use_fixture(storage_class, context)
     if context.rp_client is not None:
         context.rp_agent.start_scenario(context, scenario)
 
 
 def after_scenario(context: Context, scenario):
+    """
+    Clean up environment after each scenario completes.
+    """
     if context.rp_client is not None:
         context.rp_agent.finish_scenario(context, scenario)
     context.sc.delete(wait=True)
 
 
 def before_step(context: Context, step):
+    """
+    Prepare environment before each step execution.
+    """
     if context.rp_client is not None:
         context.rp_agent.start_step(context, step)
 
 
 def after_step(context: Context, step):
+    """
+    Clean up environment after each step completes.
+    """
     if context.rp_client is not None:
         context.rp_agent.finish_step(context, step)

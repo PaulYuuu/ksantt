@@ -6,25 +6,25 @@ from timeout_sampler import TimeoutExpiredError
 from utils import rp_attach_json
 
 
-@given("a PVC with accessMode {access_modes} and volumeMode {volume_mode}")
+@given("a PVC specification with access mode {access_modes} and storage mode {volume_mode}")
 def define_pvc(context: Context, access_modes: str, volume_mode: str):
     """
-    Initialize a PersistentVolumeClaim (PVC) with the given parameters.
+    Define a new PersistentVolumeClaim object with the given configuration parameters.
 
-    :param context: behave context for sharing state across steps.
-    :param access_modes: Access modes for the PVC (e.g., "ReadWriteOnce").
-    :param volume_mode: Volume mode for the PVC (e.g., "Filesystem" or "Block").
+    Args:
+        context: Behave context containing test configuration and resources
+        access_modes: Storage access mode (e.g., ReadWriteOnce, ReadOnlyMany)
+        volume_mode: Volume mode for the storage (e.g., Block, Filesystem)
     """
     sc_mode = context.sc.instance.parameters.mode
     pvc_name = f"pvc-{sc_mode.lower()}-{volume_mode.lower()}-{access_modes.lower()}"
 
-    # Define the PVC resource
     pvc = PersistentVolumeClaim(
         name=pvc_name,
-        namespace=context.ns.name,  # Assuming namespace is set in context
-        client=context.client,  # Assuming client is set in context
-        storage_class=context.sc.name,  # Assuming StorageClass is set in context
-        accessmodes=access_modes,  # Ensure it's a list
+        namespace=context.ns.name,
+        client=context.client,
+        storage_class=context.sc.name,
+        accessmodes=access_modes,
         volume_mode=volume_mode,
         size="1Gi",
     )
@@ -35,15 +35,28 @@ def define_pvc(context: Context, access_modes: str, volume_mode: str):
     rp_attach_json(context.log.info, "Defined PersistentVolumeClaim with manifest", "pvc.json", pvc.res)
 
 
-@when("I create a PVC")
+@when("I create the PVC")
 def create_pvc(context: Context):
-    """Create the PersistentVolumeClaim (PVC) in the namespace."""
+    """
+    Create a new PersistentVolumeClaim instance in the cluster using the predefined specification.
+
+    Args:
+        context: Behave context containing the PVC object to be created
+    """
     context.pvc.create()
 
 
-@then("the PVC should be Bound")
+@then("the PVC status should change to Bound")
 def pvc_should_be_bound(context: Context):
-    """Verify that the PVC transitions to the 'Bound' status."""
+    """
+    Monitor the PVC status and wait for it to reach the Bound state.
+
+    Args:
+        context: Behave context containing the PVC to verify
+
+    Raises:
+        TimeoutExpiredError: If the PVC fails to reach 'Bound' status within timeout
+    """
     try:
         context.pvc.wait_for_status(PersistentVolumeClaim.Status.BOUND, timeout=60)
         context.log.info(f"PersistentVolumeClaim {context.pvc.name} is bound")
@@ -57,15 +70,28 @@ def pvc_should_be_bound(context: Context):
         raise
 
 
-@when("I delete the PVC")
+@when("I perform a deletion of the PVC")
 def delete_pvc(context: Context):
-    """Delete the PersistentVolumeClaim (PVC) if it exists."""
+    """
+    Remove the PersistentVolumeClaim from the cluster and ensure deletion is finished.
+
+    Args:
+        context: Behave context containing the PVC to delete
+    """
     context.pvc.delete(wait=True)
     context.log.info(f"PersistentVolumeClaim {context.pvc.name} is deleted")
 
 
-@then("the PVC should not exist")
+@then("the PVC should be completely removed")
 def pvc_should_not_exist(context: Context):
-    """Verify that the PVC no longer exists."""
+    """
+    Verify that the PersistentVolumeClaim has been completely removed from the system.
+
+    Args:
+        context: Behave context containing the PVC to verify
+
+    Raises:
+        AssertionError: If the PVC still exists after deletion
+    """
     assert not context.pvc.exists, f"PersistentVolumeClaim '{context.pvc.name}' still exists after deletion."
     context.log.info(f"PersistentVolumeClaim '{context.pvc.name}' no longer exists")

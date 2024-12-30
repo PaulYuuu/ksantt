@@ -1,11 +1,12 @@
 @vm
-Feature: VM Creation
+Feature: VirtualMachine Creation
     As a Kubernetes administrator,
-    I want to ensure that VMs can be created, verified, and deleted
+    I want to validate VM operations with various configurations,
+    So that I can ensure proper virtualization management in the cluster.
 
-    Scenario: Create and delete VM
-        Given a VM with 2 vCPUs and 4Gi memory
-        When I create a VM
-        Then the VM should be in Running phase
-        When I delete the VM
-        Then the VM should not exist
+    Scenario: Create and verify VM with basic configuration
+        Given a VM specification with 2 vCPUs and 4Gi memory
+        When I create the VM
+        Then the VM status should change to Running
+        When I perform a deletion of the VM
+        Then the VM should be completely removed
