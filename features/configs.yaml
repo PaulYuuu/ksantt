@@ -1,0 +1,21 @@
+---
+common:
+  source: registry
+  url: docker://kubevirt/cirros-container-disk-demo:latest
+  access_modes: ReadWriteMany
+  volume_mode: Block
+dv:
+  size: 10Gi
+pvc:
+  size: 5Gi
+sc:
+  provisioner: kubesan.gitlab.io
+  vg: kubesan-vg
+  fstype: ext4
+  mode: Thin
+vm:
+  cpu: 2
+  memory: 4Gi
+  username: kubesan
+  password: redhat
+  size: 20Gi

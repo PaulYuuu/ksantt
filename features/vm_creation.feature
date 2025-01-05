@@ -5,8 +5,9 @@ Feature: VirtualMachine Creation
     So that I can ensure proper virtualization management in the cluster.
 
     Scenario: Create and verify VM with basic configuration
-        Given a VM specification with 2 vCPUs and 4Gi memory
+        Given 1 VM
         When I create the VM
         Then the VM status should change to Running
+        And I can access the VM
         When I perform a deletion of the VM
         Then the VM should be completely removed

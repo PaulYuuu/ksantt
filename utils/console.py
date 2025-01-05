@@ -1,9 +1,5 @@
-import logging
-
 import pexpect
 from timeout_sampler import TimeoutSampler
-
-LOGGER = logging.getLogger(__name__)
 
 
 class Console(object):
@@ -12,8 +8,8 @@ class Console(object):
         Initialize a VM console connection.
         """
         self.vm = vm
-        self.username = username or self.vm.login_params["username"]
-        self.password = password or self.vm.login_params["password"]
+        self.username = username or self.vm.username
+        self.password = password or self.vm.password
         self.timeout = timeout
         self.child = None
         self.login_prompt = "login:"
@@ -24,7 +20,7 @@ class Console(object):
         """
         Connect to the VM console.
         """
-        LOGGER.info(f"Connect to {self.vm.name} console")
+        self.vm.logger.info(f"Connect to {self.vm.name} console")
         self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
 
         self._connect()
@@ -36,17 +32,15 @@ class Console(object):
         Handle login sequence for VM console connection.
         """
         self.child.send("\n\n")
-        if self.username:
-            self.child.expect(self.login_prompt, timeout=360)
-            LOGGER.info(f"{self.vm.name}: Using username {self.username}")
-            self.child.sendline(self.username)
-            if self.password:
-                self.child.expect("Password:")
-                LOGGER.info(f"{self.vm.name}: Using password {self.password}")
-                self.child.sendline(self.password)
+        self.child.expect([self.login_prompt, "cirros"], timeout=360)
+        self.vm.logger.info(f"{self.vm.name}: Using username {self.username}")
+        self.child.sendline(self.username)
+        self.child.expect("Password:")
+        self.vm.logger.info(f"{self.vm.name}: Using password {self.password}")
+        self.child.sendline(self.password)
 
         self.child.expect(self.prompt, timeout=150)
-        LOGGER.info(f"{self.vm.name}: Got prompt {self.prompt}")
+        self.vm.logger.info(f"{self.vm.name}: Got prompt {self.prompt}")
 
     def disconnect(self):
         """
@@ -62,13 +56,6 @@ class Console(object):
             self.child.send("\n\n")
             self.child.expect("login:")
         self.child.close()
-
-    def force_disconnect(self):
-        """
-        Force disconnect from VM console. Workaround for RHEL 7.7.
-        """
-        self.console_eof_sampler(func=pexpect.spawn, command=self.cmd, timeout=self.timeout)
-        self.disconnect()
 
     def console_eof_sampler(self, func, command, timeout):
         """
@@ -86,7 +73,6 @@ class Console(object):
         for sample in sampler:
             if sample:
                 self.child = sample
-                self.child.logfile = open(f"{self.base_dir}/{self.vm.name}.pexpect.log", "a")
                 break
 
     def _generate_cmd(self):

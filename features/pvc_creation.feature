@@ -17,5 +17,9 @@ Feature: PersistentVolumeClaim Creation
       | ReadOnlyMany    | Block       |
       | ReadWriteMany   | Block       |
       | ReadWriteOnce   | Filesystem  |
+
+    @negative
+    Examples:
+      | accessModes     | volumeMode  |
       | ReadOnlyMany    | Filesystem  |
       | ReadWriteMany   | Filesystem  |

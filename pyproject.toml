@@ -5,10 +5,10 @@ description = "KubeSAN Testing Tool"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "allure-behave",
     "behave",
     "behave-reportportal",
     "kubernetes",
+    "openshift-client-python",
     "openshift-python-utilities",
     "openshift-python-wrapper",
 ]
@@ -67,3 +67,4 @@ line-ending = "auto"
 no_implicit_optional = true
 show_error_codes = true
 warn_unused_ignores = true
+disable_error_code = ["var-annotated"]

@@ -1855,12 +1855,13 @@ wheels = [
 
 [[package]]
 name = "timeout-sampler"
-version = "1.0.3"
+version = "1.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "pytest" },
     { name = "python-simple-logger" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e6/40/666561ffecb9b50adae217919875c39f2de73b36245a60f0e16a6e5526e6/timeout_sampler-1.0.3.tar.gz", hash = "sha256:e07826c346fc591422fc94664c776c139341198edefde69d25732893c4f09188", size = 3658 }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/61/1c45a61fbefe646ae461a96181dd45d42d33af7583e4e259730bfee0ede0/timeout_sampler-1.0.4.tar.gz", hash = "sha256:f44424fb6d114c8dba88c9c5818727482dbd264c57ca7fd7127aa0c32ef80f34", size = 17092 }
 
 [[package]]
 name = "tomli"
