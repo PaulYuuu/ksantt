@@ -29,6 +29,55 @@ def dynamic_client(context: Context):
 
 
 @fixture
+def load_parameters(context: Context):
+    """
+    Load parameters from the config file.
+    """
+    # Parameters
+    config_file = Path(__file__).parent / "configs.yaml"
+    with open(config_file, "r") as conf:
+        params = yaml.safe_load(conf)
+        common = params.pop("common", {})
+        for section in params:
+            for key, value in common.items():
+                params[section].setdefault(key, value)
+    for key, value in context.config.userdata.items():
+        section = key.split(".", 1)
+        if section[0] in params:
+            params[section[0]][section[1]] = value
+        else:
+            for section in params:
+                params[section][key] = value
+    context._params = params
+
+
+@fixture
+def logger(context: Context):
+    """
+    Logger fixture.
+    """
+    # ReportPortal and logger
+    rp_cfg = read_config(context)
+    rp_cfg.api_key = rp_cfg.api_key or os.getenv("rp_api_key")
+    rp_cfg.endpoint = rp_cfg.endpoint or os.getenv("rp_endpoint")
+    rp_cfg.project = rp_cfg.project or os.getenv("rp_project")
+    context.rp_client = create_rp_service(rp_cfg)
+    context.rph = None
+    logging.setLoggerClass(RPLogger)
+    logger = logging.getLogger("ksantt")
+    logger.setLevel("DEBUG")
+    if context.rp_client is not None:
+        # Workaround for ssl issue
+        context.rp_client.verify_ssl = False
+        context.rp_agent = BehaveAgent(rp_cfg, context.rp_client)
+        context.rp_agent.start_launch(context)
+        rph = RPLogHandler(rp_client=context.rp_client)
+        logger.addHandler(rph)
+        context.rph = rph
+    context.logger = logger
+
+
+@fixture
 def random_namespace(context: Context):
     """
     Create a random test namespace for isolation.
@@ -77,39 +126,9 @@ def before_all(context: Context):
     """
     Initialize global test environment before any tests run.
     """
-    # ReportPortal and logger
-    rp_cfg = read_config(context)
-    rp_cfg.api_key = rp_cfg.api_key or os.getenv("rp_api_key")
-    rp_cfg.endpoint = rp_cfg.endpoint or os.getenv("rp_endpoint")
-    rp_cfg.project = rp_cfg.project or os.getenv("rp_project")
-    context.rp_client = create_rp_service(rp_cfg)
-    context.rph = None
-    logging.setLoggerClass(RPLogger)
-    log = logging.getLogger("ksantt")
-    log.setLevel("DEBUG")
-    if context.rp_client is not None:
-        # Workaround for ssl issue
-        context.rp_client.verify_ssl = False
-        context.rp_agent = BehaveAgent(rp_cfg, context.rp_client)
-        context.rp_agent.start_launch(context)
-        rph = RPLogHandler(rp_client=context.rp_client)
-        log.addHandler(rph)
-        context.rph = rph
-    context.log = log
-
-    # Parameters
-    config_file = Path(__file__).parent / "configs.yaml"
-    with open(config_file, "r") as conf:
-        params = yaml.safe_load(conf)
-        common = params.pop("common", {})
-        for section in params:
-            for key, value in common.items():
-                params[section].setdefault(key, value)
-    for key, value in context.config.userdata.items():
-        section = key.split(".", 1)
-        if section[0] in params:
-            params[section[0]][section[1]] = value
-    context._params = params
+    use_fixture(logger, context)
+    use_fixture(load_parameters, context)
+    use_fixture(dynamic_client, context)
 
 
 def after_all(context: Context):
@@ -127,7 +146,6 @@ def before_feature(context: Context, feature):
     """
     if context.rp_client is not None:
         context.rp_agent.start_feature(context, feature)
-    use_fixture(dynamic_client, context)
     use_fixture(random_namespace, context)
     use_fixture(storage_class, context)
 
@@ -136,28 +154,28 @@ def after_feature(context: Context, feature):
     """
     Clean up environment after each feature completes.
     """
-    if context.rp_client is not None:
-        context.rp_agent.finish_feature(context, feature)
     context.sc.delete(wait=True)
     context.ns.delete(wait=True)
+    if context.rp_client is not None:
+        context.rp_agent.finish_feature(context, feature)
 
 
 def before_scenario(context: Context, scenario):
     """
     Set up environment before each scenario starts.
     """
+    context.params = context._params.copy()
     if context.rp_client is not None:
         context.rp_agent.start_scenario(context, scenario)
-    context.params = context._params.copy()
 
 
 def after_scenario(context: Context, scenario):
     """
     Clean up environment after each scenario completes.
     """
+    del context.params
     if context.rp_client is not None:
         context.rp_agent.finish_scenario(context, scenario)
-    del context.params
 
 
 def before_step(context: Context, step):

@@ -30,14 +30,15 @@ class Console(object):
     def _connect(self):
         """
         Handle login sequence for VM console connection.
+        Note: cirros and alpine have some problem with password prompt.
         """
         self.child.send("\n\n")
-        self.child.expect([self.login_prompt, "cirros"], timeout=360)
+        self.child.expect(self.login_prompt, timeout=360)
         self.vm.logger.info(f"{self.vm.name}: Using username {self.username}")
         self.child.sendline(self.username)
-        self.child.expect("Password:")
-        self.vm.logger.info(f"{self.vm.name}: Using password {self.password}")
-        self.child.sendline(self.password)
+        if self.password:
+            self.vm.logger.info(f"{self.vm.name}: Using password {self.password}")
+            self.child.sendline(self.password)
 
         self.child.expect(self.prompt, timeout=150)
         self.vm.logger.info(f"{self.vm.name}: Got prompt {self.prompt}")
@@ -63,9 +64,12 @@ class Console(object):
         """
         sampler = TimeoutSampler(
             wait_timeout=360,
-            sleep=5,
+            sleep=10,
             func=func,
-            exceptions_dict={pexpect.exceptions.EOF: []},
+            exceptions_dict={
+                pexpect.exceptions.EOF: [],
+                UnicodeDecodeError: [],
+            },
             command=command,
             timeout=timeout,
             encoding="utf-8",

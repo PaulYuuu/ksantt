@@ -1,10 +1,13 @@
 from functools import wraps
-from typing import Any, Callable
 
 import paramiko
 import yaml
 from ocp_resources.datavolume import DataVolume
-from ocp_resources.utils.constants import TIMEOUT_10MINUTES
+from ocp_resources.utils.constants import (
+    TIMEOUT_2MINUTES,
+    TIMEOUT_4MINUTES,
+    TIMEOUT_10MINUTES,
+)
 from ocp_resources.virtual_machine import VirtualMachine
 from ocp_resources.virtual_machine_instance_migration import VirtualMachineInstanceMigration
 from pyhelper_utils.shell import run_command
@@ -46,7 +49,8 @@ class VM(VirtualMachine):
         username=None,
         password=None,
         ssh=True,
-        pvc=[],
+        volumes=None,
+        hotpluggable_volumes=None,
         teardown=True,
         run_strategy=VirtualMachine.RunStrategy.MANUAL,
         dry_run=None,
@@ -91,11 +95,12 @@ class VM(VirtualMachine):
         self.inject_cloud_init = inject_cloud_init
         self.ssh = ssh
         self.network_model = network_model
-        self.pvc = pvc
+        self.volumes = volumes or []
+        self.hotpluggable_volumes = hotpluggable_volumes or []
         self.run_strategy = run_strategy
         self.username = username
         self.password = password
-        self.console = None
+        self._console = None
         if "cirros" in self.url:
             self.inject_cloud_init = False
             self.username = "cirros"
@@ -132,6 +137,23 @@ class VM(VirtualMachine):
         dv.to_dict()
         dv.res["spec"]["imagePullPolicy"] = self.image_pull_policy
         return dv
+
+    def _volume_spec(self, volume, hotpluggable=False):
+        """
+        Insert volumes into the VM.
+        """
+        disk_type = self.disk_type if not hotpluggable else "scsi"
+        disk_spec = {
+            "disk": {"bus": disk_type},
+            "name": volume.name,
+        }
+        volume_kind = volume.kind
+        volume_kind = volume_kind.replace(volume_kind[0], volume_kind[0].lower(), 1)
+        volume_name = "name" if volume_kind == "dataVolume" else "claimName"
+        volume_spec = {volume_kind: {volume_name: volume.name}, "name": volume.name}
+        if hotpluggable:
+            volume_spec[volume_kind]["hotpluggable"] = True
+        return disk_spec, volume_spec
 
     def to_dict(self):
         """
@@ -174,19 +196,10 @@ class VM(VirtualMachine):
         disks_spec = devices_spec.setdefault("disks", [])
         volumes_spec = template_spec.setdefault("volumes", [])
 
-        disks_spec.append(
-            {
-                "disk": {"bus": self.disk_type},
-                "name": "rootdisk",
-            }
-        )
-        volumes_spec.append(
-            {
-                "dataVolume": {"name": self.dv.name},
-                "name": "rootdisk",
-            }
-        )
-        # Configure cloud-init
+        default_disk = self._volume_spec(self.dv)
+        disks_spec.append(default_disk[0])
+        volumes_spec.append(default_disk[1])
+        # cloud-init
         if self.inject_cloud_init:
             disks_spec.append(
                 {
@@ -196,20 +209,17 @@ class VM(VirtualMachine):
             )
             volumes_spec.append({"name": "cloudinitdisk", "cloudInitNoCloud": self.__cloudinit_data()})
 
-        if self.pvc:
-            for pvc in self.pvc:
-                disks_spec.append(
-                    {
-                        "disk": {"bus": self.disk_type},
-                        "name": pvc.name,
-                    }
-                )
-                volumes_spec.append(
-                    {
-                        "persistentVolumeClaim": {"claimName": pvc.name},
-                        "name": pvc.name,
-                    }
-                )
+        if self.volumes:
+            for volume in self.volumes:
+                disk_spec, volume_spec = self._volume_spec(volume)
+                disks_spec.append(disk_spec)
+                volumes_spec.append(volume_spec)
+
+        if self.hotpluggable_volumes:
+            for volume in self.hotpluggable_volumes:
+                disk_spec, volume_spec = self._volume_spec(volume, hotpluggable=True)
+                disks_spec.append(disk_spec)
+                volumes_spec.append(volume_spec)
 
         # Configure network
         interfaces_spec = devices_spec.setdefault("interfaces", [])
@@ -217,7 +227,7 @@ class VM(VirtualMachine):
         networks_spec = template_spec.setdefault("networks", [])
         networks_spec.append({"name": "default", "pod": {}})
 
-    def virtctl_proxy(func: Callable[..., Any]):
+    def virtctl_proxy(func):
         """
         Decorator to add ProxyCommand functionality for SSH connections.
         """
@@ -225,33 +235,44 @@ class VM(VirtualMachine):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             proxy_cmd = f"virtctl port-forward --stdio=true {self.name}.{self.namespace} 22"
-            kwargs.setdefault("proxy_command", paramiko.ProxyCommand(proxy_cmd))
+            kwargs.setdefault("proxy_command", proxy_cmd)
             return func(self, *args, **kwargs)
 
         return wrapper
 
-    def wait_for_login(self, timeout=TIMEOUT_10MINUTES):
+    def wait_for_console_login(self, timeout=TIMEOUT_4MINUTES):
         """
         Wait for the VM to be ready for SSH login.
         """
+        if self._console:
+            return
         self.logger.info(f"Waiting for {self.name} to be ready for console login")
-        self.console = Console(self, timeout=timeout)
-        self.console.connect()
+        self._console = Console(self, timeout=timeout)
+        self._console.connect()
 
     @virtctl_proxy
-    def create_session(self, proxy_command=None):
+    def wait_for_ssh_login(self, timeout=TIMEOUT_2MINUTES, proxy_command=None):
         """
         Create an SSH session for the VM.
         """
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(
-            hostname=self.name,
-            username=self.username,
-            password=self.password,
-            sock=proxy_command,
-        )
-        return ssh
+        for proxy in TimeoutSampler(
+            wait_timeout=timeout,
+            sleep=10,
+            func=paramiko.ProxyCommand,
+            command_line=proxy_command,
+        ):
+            try:
+                ssh.connect(
+                    hostname=self.name,
+                    username=self.username,
+                    password=self.password,
+                    sock=proxy,
+                )
+                return ssh
+            except paramiko.ssh_exception.SSHException:
+                proxy.close()
 
     def cmd(self, command, session):
         """
@@ -296,6 +317,7 @@ class VM(VirtualMachine):
         """
         virtctl_cmd = [
             "virtctl",
+            f"--namespace={self.namespace}",
             "addvolume",
             self.vmi.name,
             f"--volume-name={volume.name}",
@@ -309,6 +331,7 @@ class VM(VirtualMachine):
         if persist:
             virtctl_cmd.append("--persist")
         run_command(virtctl_cmd)
+        self.hotpluggable_volumes.append(volume)
 
     def hotunplug_volume(self, volume, persist=None):
         # XXX: Define a resource dict + self.update_replace() instead of virtctl?
@@ -318,10 +341,17 @@ class VM(VirtualMachine):
         :param volume: The volume to hotunplug.
         :param persist: Whether to persist the volume.
         """
-        virtctl_cmd = ["virtctl", "removevolume", self.vmi.name, f"--volume-name={volume.name}"]
+        virtctl_cmd = [
+            "virtctl",
+            f"--namespace={self.namespace}",
+            "removevolume",
+            self.vmi.name,
+            f"--volume-name={volume.name}",
+        ]
         if persist:
             virtctl_cmd.append("--persist")
         run_command(virtctl_cmd)
+        self.hotpluggable_volumes.remove(volume)
 
     def migrate(self, wait=True, timeout=TIMEOUT_10MINUTES):
         """
@@ -346,4 +376,11 @@ class VM(VirtualMachine):
                     if sample == vmim.Status.SUCCEEDED:
                         break
             except TimeoutExpiredError as exc:
-                print(f"Migration failed: {exc}")
+                self.logger.error(f"Migration failed: {exc}")
+                raise
+
+    @property
+    def console(self):
+        if not self._console:
+            self.wait_for_console_login()
+        return self._console

@@ -1,20 +1,25 @@
 @vm
-Feature: Hotplug PVC to running VM
+Feature: Hotplug volumes to running VM
     As a Kubernetes administrator,
-    I want to hotplug PVC to running VM,
-    So that I can use the PVC as storage.
+    I want to hot plug/unplug volumes to running VM,
+    So that I can test the volumes hotplug/unplug functionality.
 
-    Background: some requirement of this test
+    Background: 1 basic VM
         Given 1 VM
-        And 1 PVC
 
-    Scenario: Hotplug PVC to running VM
+    Scenario Outline: Hotplug PVCs to running VM
+        Given <pvcs> PVCs
         When I create the VM
-        And I create the PVC
+        And I create the PVCs
         Then the VM status should change to Running
-        And the PVC status should change to Bound
-        When I hotplug the PVC to the running VM
-        Then the PVC should be successfully attached to the VM
-        And the VM should detect the new storage device
+        And the PVCs status should change to Bound
+        When I hotplug <pvcs> PVCs to the running VM
+        Then the VM should be able to access the new PVCs
         When I perform a deletion of the VM
         Then the VM should be completely removed
+
+        Examples:
+            | pvcs |
+            | 1    |
+            | 2    |
+            | 8    |
