@@ -113,6 +113,7 @@ def storage_class(context: Context):
         provisioner=context._params["sc"]["provisioner"],
         reclaim_policy=StorageClass.ReclaimPolicy.DELETE,
         volume_binding_mode=StorageClass.VolumeBindingMode.Immediate,
+        allow_volume_expansion=True,
         parameters=parameters,
     )
     if context.rph:

@@ -9,7 +9,7 @@ class MigrationSteps:
         Define VirtualMachine(s) in the cluster.
         """
         context.params["vm"]["access_modes"] = "ReadWriteMany"
-        context.execute_steps(f"{count} VMs")
+        context.execute_steps(f"Given {count} VM{'' if int(count) == 1 else 's'}")
 
     @when(r"I migrate the VM(?:s)?")
     def migrate_vms(context):
