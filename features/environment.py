@@ -62,19 +62,17 @@ def logger(context: Context):
     rp_cfg.endpoint = rp_cfg.endpoint or os.getenv("rp_endpoint")
     rp_cfg.project = rp_cfg.project or os.getenv("rp_project")
     context.rp_client = create_rp_service(rp_cfg)
-    context.rph = None
     logging.setLoggerClass(RPLogger)
     logger = logging.getLogger("ksantt")
     logger.setLevel("DEBUG")
+    context.logger = logger
     if context.rp_client is not None:
         # Workaround for ssl issue
         context.rp_client.verify_ssl = False
         context.rp_agent = BehaveAgent(rp_cfg, context.rp_client)
         context.rp_agent.start_launch(context)
         rph = RPLogHandler(rp_client=context.rp_client)
-        logger.addHandler(rph)
-        context.rph = rph
-    context.logger = logger
+        logging.getLogger().addHandler(rph)
 
 
 @fixture
@@ -86,8 +84,7 @@ def random_namespace(context: Context):
     ns_name = f"kubesan-ns-{random_suffix}"
 
     ns = Namespace(name=ns_name, client=context.client)
-    if context.rph:
-        ns.logger.addHandler(context.rph)
+    ns.logger.propagate = True
     ns.create(wait=True)
     ns.logger.info(f"Created namespace '{ns.name}'")
     context.ns = ns
@@ -116,8 +113,7 @@ def storage_class(context: Context):
         allow_volume_expansion=True,
         parameters=parameters,
     )
-    if context.rph:
-        sc.logger.addHandler(context.rph)
+    sc.logger.propagate = True
     sc.create(wait=True)
     sc.logger.info(f"StorageClass '{sc.name}' created")
     context.sc = sc

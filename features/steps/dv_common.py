@@ -35,8 +35,7 @@ class DVSteps:
                 storage_class=context.sc.name,
                 **dv_params,
             )
-            if context.rph:
-                dv.logger.addHandler(context.rph)
+            dv.logger.propagate = True
             dv.to_dict()
             context.dvs.append(dv)
             utils.rp_attach_json(

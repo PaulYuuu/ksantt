@@ -37,8 +37,7 @@ class VMSteps:
                 inject_cloud_init=True,
                 **vm_params,
             )
-            if context.rph:
-                vm.logger.addHandler(context.rph)
+            vm.logger.propagate = True
             vm.to_dict()
             context.vms.append(vm)
             utils.rp_attach_json(context.logger.info, f"Defined {vm.name} with manifest", f"{vm.name}.json", vm.res)

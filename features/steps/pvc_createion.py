@@ -22,8 +22,7 @@ def define_pvcs(context, access_modes, volume_mode):
         volume_mode=volume_mode,
         size=size,
     )
-    if context.rph:
-        pvc.logger.addHandler(context.rph)
+    pvc.logger.propagate = True
     pvc.to_dict()
     context.pvcs = [pvc]
     rp_attach_json(

@@ -27,8 +27,7 @@ def define_dv(context, access_modes, volume_mode):
         volume_mode=volume_mode,
         size=size,
     )
-    if context.rph:
-        dv.logger.addHandler(context.rph)
+    dv.logger.propagate = True
     dv.to_dict()
     context.dvs = [dv]
     utils.rp_attach_json(

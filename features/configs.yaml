@@ -1,8 +1,7 @@
 ---
 common:
   source: http
-  #url: docker://quay.io/containerdisks/fedora:latest
-  url: http://download.eng.pek2.redhat.com/rhel-9/nightly/RHEL-9/RHEL-9.6.0-20250106.6/compose/BaseOS/x86_64/images/rhel-guest-image-9.6-20250106.6.x86_64.qcow2
+  url: docker://quay.io/containerdisks/fedora:latest
   volume_mode: Block
 dv:
   access_modes: ReadWriteMany
