@@ -22,7 +22,6 @@ def define_pvcs(context, access_modes, volume_mode):
         volume_mode=volume_mode,
         size=size,
     )
-    pvc.logger.propagate = True
     pvc.to_dict()
     context.pvcs = [pvc]
     rp_attach_json(

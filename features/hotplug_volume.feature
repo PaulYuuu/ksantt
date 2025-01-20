@@ -9,14 +9,14 @@ Feature: Hotplug volumes to running VM
 
     Scenario Outline: Hotplug PVCs to running VM
         Given <pvcs> PVCs
-        When I create the VM
-        And I create the PVCs
-        Then the VM status should change to Running
-        And the PVCs status should change to Bound
-        When I hotplug <pvcs> PVCs to the running VM
-        Then the VM should be able to access the new PVCs
-        When I perform a deletion of the VM
-        Then the VM should be completely removed
+        When  I create the VM
+        And   I create the PVCs
+        Then  the VM status should change to Running
+        And   the PVCs status should change to Bound
+        When  I hotplug <pvcs> PVCs to the running VM
+        Then  the VM should be able to access the new PVCs
+        When  I perform a deletion of the VM
+        Then  the VM should be completely removed
 
         Examples:
             | pvcs |

@@ -13,6 +13,6 @@ Feature: Multiple VMs with multiple volumes
     Scenario: Create multiple VMs
         When I create the VMs
         Then the VMs status should change to Running
-        And I can access the VMs
+        And  I can access the VMs
         When I perform a deletion of the VMs
         Then the VMs should be completely removed

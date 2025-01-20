@@ -6,7 +6,7 @@ from ocp_resources.pod import Pod
 from timeout_sampler import TimeoutExpiredError
 
 import utils
-from utils.exceptions import BehaveStepError
+from utils.exceptions import BehaveScenarioError
 
 
 class DVSteps:
@@ -35,7 +35,6 @@ class DVSteps:
                 storage_class=context.sc.name,
                 **dv_params,
             )
-            dv.logger.propagate = True
             dv.to_dict()
             context.dvs.append(dv)
             utils.rp_attach_json(
@@ -88,7 +87,7 @@ class DVSteps:
                     "\n".join(event_messages),
                 )
                 if not expected_skipped:
-                    raise BehaveStepError(context.step.name, "Wait until DataVolume succeeded")
+                    raise BehaveScenarioError(context.scenario.name, "Wait until DataVolume succeeded")
                 context.scenario.skip(f'DataVolume using not supported accessModes "{dv.access_modes}"')
 
     @when(r"I perform a deletion of the DV(?:s)?")

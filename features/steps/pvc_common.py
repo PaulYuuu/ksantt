@@ -30,7 +30,6 @@ class PVCSteps:
                 storage_class=context.sc.name,
                 **pvc_params,
             )
-            pvc.logger.propagate = True
             pvc.to_dict()
             context.pvcs.append(pvc)
             utils.rp_attach_json(
