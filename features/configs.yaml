@@ -1,6 +1,6 @@
 ---
 common:
-  source: http
+  source: registry
   url: docker://quay.io/containerdisks/fedora:latest
   volume_mode: Block
 dv:
