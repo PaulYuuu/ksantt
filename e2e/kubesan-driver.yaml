@@ -1,0 +1,21 @@
+---
+StorageClass:
+  FromName: false
+  FromExistingClassName: kube-san
+DriverInfo:
+  Name: kubesan.gitlab.io
+  Capabilities:
+    block: true
+    controllerExpansion: false
+    exec: true
+    fsGroup: false
+    multipods: true
+    nodeExpansion: false
+    persistence: true
+    singleNodeVolume: false
+    snapshotDataSource: false
+    topology: false
+    capacity: false
+    RWX: true
+InlineVolumes:
+  - shared: false
