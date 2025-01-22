@@ -1,0 +1,15 @@
+__pycache__/
+
+# Unit test / coverage reports
+.cache
+
+# Environments
+.venv
+.direnv
+
+# ruff
+.ruff_cache
+
+# project folder
+.idea/
+.vscode/
