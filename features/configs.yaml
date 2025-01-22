@@ -1,0 +1,23 @@
+---
+common:
+  source: registry
+  url: docker://quay.io/containerdisks/fedora:latest
+  volume_mode: Block
+dv:
+  access_modes: ReadWriteMany
+  size: 10Gi
+pvc:
+  accessmodes: ReadWriteMany
+  size: 5Gi
+sc:
+  provisioner: kubesan.gitlab.io
+  vg: kubesan-vg
+  fstype: ext4
+  mode: Thin
+vm:
+  access_modes: ReadWriteMany
+  cpu: 2
+  memory: 4Gi
+  username: kubesan
+  password: redhat
+  size: 20Gi
