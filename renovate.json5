@@ -16,6 +16,10 @@
   prConcurrentLimit: 10,
   lockFileMaintenance: {
     enabled: true,
+    automerge: true,
+    branchTopic: 'uv-lock-file-maintenance',
+    commitMessageAction: 'uv.lock file maintenance',
+    prBodyDefinitions: {'Change': 'uv.lock refreshed'}
   },
   'pre-commit': {
     enabled: true,
