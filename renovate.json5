@@ -1,35 +1,40 @@
 {
-  $schema: "https: //docs.renovatebot.com/renovate-schema.json",
+  $schema: 'https: //docs.renovatebot.com/renovate-schema.json',
   extends: [
-    "config:recommended",
-    ":separateMultipleMajorReleases"
+    'config:recommended',
+    ':separateMultipleMajorReleases',
   ],
   schedule: [
-    "after 10pm every weekend",
+    'after 10pm every weekend',
   ],
   assignees: [
-    "PaulYuuu"
+    'PaulYuuu',
   ],
   reviewers: [
-    "PaulYuuu"
+    'PaulYuuu',
   ],
   prConcurrentLimit: 10,
   lockFileMaintenance: {
     enabled: true,
   },
-  "pre-commit": {
-    enabled: true
+  'pre-commit': {
+    enabled: true,
   },
   baseBranches: [
-    "main",
+    'main',
   ],
   packageRules: [
     {
-      groupName: "All minor patch dependencies",
-      groupSlug: "all-minor-patch",
-      matchPackagePatterns: ["*"],
-      matchUpdateTypes: ["minor", "patch"],
-      automerge: true
+      groupName: 'All minor patch dependencies',
+      groupSlug: 'all-minor-patch',
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+      automerge: true,
+      matchPackageNames: [
+        '*',
+      ],
     },
   ],
 }
